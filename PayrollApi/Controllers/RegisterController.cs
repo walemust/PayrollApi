@@ -8,6 +8,8 @@ using PayrollApi.View_Model;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace PayrollApi.Controllers
@@ -24,9 +26,18 @@ namespace PayrollApi.Controllers
             _fullstackDbContext = fullstackDbContext;
         }
 
+        public static string HashedPassword(string password)
+        {
+            SHA256 hash = SHA256.Create();
+            var passwordBytes = Encoding.Default.GetBytes(password);
+            var hashedpassword = hash.ComputeHash(passwordBytes);
+            var hexString = BitConverter.ToString(hashedpassword);
+            return hexString;
+        }
+
         [HttpPost]
         [Route("signin")]
-        public async Task<IActionResult> SignIn([FromBody] Employee registerRequest)
+        public async Task<IActionResult> SignIn([FromBody] LoginViewModel registerRequest)
         {
 
             //var staff =
@@ -51,7 +62,7 @@ namespace PayrollApi.Controllers
                 var staffExistsAsync = await _fullstackDbContext.Employeees.Where(x => x.StaffID == registerRequest.StaffID).AnyAsync();
                 if (staffExistsAsync)
                 {
-                    var staffDetails = await _fullstackDbContext.Employeees.Where(x => x.StaffID == registerRequest.StaffID && x.Password == registerRequest.Password).FirstOrDefaultAsync();
+                    var staffDetails = await _fullstackDbContext.Employeees.Where(x => x.StaffID == registerRequest.StaffID && x.Password == HashedPassword(registerRequest.Password)).FirstOrDefaultAsync();
 
                     if (staffDetails != null)
                     {
@@ -89,6 +100,11 @@ namespace PayrollApi.Controllers
         {
             try
             {
+                var staffExistsAsync = await _fullstackDbContext.Employeees.Where(x => x.StaffID == registerRequest.StaffID).AnyAsync();
+                if (staffExistsAsync == staffExistsAsync)
+                {
+                    return Json("User already exist");
+                }
                 var Employee = new Employee {
                     Name = registerRequest.Name,
                     Email = registerRequest.Email,

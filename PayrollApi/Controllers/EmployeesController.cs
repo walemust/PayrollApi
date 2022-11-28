@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +26,15 @@ namespace PayrollApi.Controllers
         {
             _fullstackDbContext = fullstackDbContext;
         }
+        public static string HashedPassword(string password)
+        {
+            SHA256 hash = SHA256.Create();
+            var passwordBytes = Encoding.Default.GetBytes(password);
+            var hashedpassword = hash.ComputeHash(passwordBytes);
+            var hexString = BitConverter.ToString(hashedpassword);
+            return hexString;
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetAllEmployees()
         {
@@ -45,11 +56,23 @@ namespace PayrollApi.Controllers
         [HttpPost]
         public async Task<IActionResult> AddEmployee(Employee employeeRequest)
         {
+            var addStaff = new Employee 
+            {
+                StaffID = employeeRequest.StaffID,
+                Name = employeeRequest.Name,
+                Email = employeeRequest.Email,
+                Phone = employeeRequest.Phone,
+                Salary = employeeRequest.Salary,
+                Department = employeeRequest.Department,
+                Password = HashedPassword(employeeRequest.Password),
+                DOB = employeeRequest.DOB,
+                Status = employeeRequest.Status,
+                ChangePassword = employeeRequest.ChangePassword,
+            };
 
-            await _fullstackDbContext.Employeees.AddAsync(employeeRequest);
+            await _fullstackDbContext.Employeees.AddAsync(addStaff);
             await _fullstackDbContext.SaveChangesAsync();
-
-            return Ok(employeeRequest);
+            return Ok("Staff added successfully");
         }
 
         [HttpGet]
@@ -85,6 +108,7 @@ namespace PayrollApi.Controllers
             employee.Department = updateEmployeeRequest.Department;
             employee.DOB = updateEmployeeRequest.DOB;
             employee.Status = updateEmployeeRequest.Status;
+            employee.Password = HashedPassword(updateEmployeeRequest.Password);
 
             await _fullstackDbContext.SaveChangesAsync();
 
